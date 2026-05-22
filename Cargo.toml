@@ -29,6 +29,9 @@ dotenvy = "0.15"
 # Math
 rust_decimal = "1"
 
+# HTTP client (for direct CLOB/Gamma calls before SDK is fully wired)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
 # Error handling
 anyhow = "1"
 

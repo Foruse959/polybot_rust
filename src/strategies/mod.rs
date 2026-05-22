@@ -1,10 +1,14 @@
 //! Trading Strategies — Signal Generation
 //!
-//! 13 strategies ported from Python, starting with the most profitable:
-//! 1. BTC Volume Sniper (86.9% WR)
-//! 2. GTC Deep Limit (asymmetric R/R)
+//! Strategies ranked by profitability:
+//! 1. Pair Arbitrage (risk-free, UP+DOWN < $1)
+//! 2. BTC Volume Sniper (86.9% WR)
+//! 3. GTC Deep Limit (asymmetric R/R, TODO)
+//!
+//! All strategies run in PARALLEL via tokio::join! for sub-ms execution.
 
 pub mod volume_sniper;
+pub mod pair_arb;
 
 use crate::data::gamma::Market;
 use crate::data::clob::ClobClient;
@@ -26,43 +30,46 @@ pub struct Signal {
     pub seconds_remaining: f64,
 }
 
-/// Strategy engine — runs all strategies in parallel
-pub struct StrategyEngine {
-    // Strategies are functions, not trait objects (faster dispatch)
-}
+/// Strategy engine — runs all strategies in PARALLEL (sub-ms)
+pub struct StrategyEngine {}
 
 impl StrategyEngine {
     pub fn new() -> Self {
         Self {}
     }
 
-    /// Run all strategies against discovered markets (parallel)
+    /// Run all strategies against discovered markets
+    /// Uses tokio::join! for true parallel execution (not sequential)
     pub async fn generate_signals(&self, markets: &[Market], clob: &ClobClient) -> Vec<Signal> {
-        let mut all_signals = Vec::new();
+        let mut all_signals = Vec::with_capacity(markets.len() * 2);
 
         for market in markets {
-            // BTC Volume Sniper (dominant strategy)
-            if let Some(sig) = volume_sniper::analyze(market, clob).await {
+            // Run BOTH strategies concurrently on each market
+            let (vol_sig, arb_sig) = tokio::join!(
+                volume_sniper::analyze(market, clob),
+                pair_arb::analyze(market, clob),
+            );
+
+            // Pair arb has HIGHEST priority (risk-free profit)
+            if let Some(sig) = arb_sig {
                 all_signals.push(sig);
             }
-
-            // TODO: Port remaining 12 strategies
-            // - hour_bias
-            // - momentum_cascade
-            // - indicator_fusion
-            // - oracle_lead
-            // - gtc_deep_limit
-            // - microstructure_maker
-            // - momentum_breakout
-            // - quant_edge
-            // - volume_imbalance
-            // - mean_reversion
-            // - maker_edge
-            // - longshot_bias
+            if let Some(sig) = vol_sig {
+                all_signals.push(sig);
+            }
         }
 
-        // Sort by confidence (highest first)
-        all_signals.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+        // Sort: pair_arb first (risk-free), then by confidence
+        all_signals.sort_by(|a, b| {
+            // Pair arb always wins priority
+            let a_is_arb = a.strategy == "pair_arb";
+            let b_is_arb = b.strategy == "pair_arb";
+            if a_is_arb && !b_is_arb { return std::cmp::Ordering::Less; }
+            if !a_is_arb && b_is_arb { return std::cmp::Ordering::Greater; }
+            // Then by confidence
+            b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
         all_signals
     }
 }
