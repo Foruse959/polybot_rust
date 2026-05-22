@@ -6,29 +6,18 @@ description = "High-frequency Polymarket trading bot in Rust — sub-ms latency"
 authors = ["Foruse959"]
 
 [dependencies]
+# ═══ OFFICIAL POLYMARKET SDK ═══
+# https://github.com/Polymarket/rs-clob-client-v2
+# Handles ALL CLOB auth, order signing (EIP-712), API calls, WebSocket, Gamma
+# No manual HMAC/signing needed — SDK does it all for sig_type=3
+polymarket_client_sdk_v2 = { git = "https://github.com/Polymarket/rs-clob-client-v2", features = ["clob", "gamma", "ws", "data"] }
+
 # Async runtime
 tokio = { version = "1", features = ["full"] }
-
-# HTTP client
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
-
-# WebSocket
-tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
-futures-util = "0.3"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-# Crypto (for CLOB auth signing)
-ethers = { version = "2", features = ["rustls"] }
-hex = "0.4"
-hmac = "0.12"
-sha2 = "0.10"
-base64 = "0.22"
-
-# Time
-chrono = { version = "0.4", features = ["serde"] }
 
 # Logging
 tracing = "0.1"
@@ -39,7 +28,12 @@ dotenvy = "0.15"
 
 # Math
 rust_decimal = "1"
-anyhow = "1.0.102"
+
+# Error handling
+anyhow = "1"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
 
 [profile.release]
 opt-level = 3

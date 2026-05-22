@@ -63,8 +63,9 @@ cargo build --release
 - [x] BTC Volume Sniper strategy
 - [x] Risk manager (5-tier system)
 - [x] Executor (entry/exit/dedup)
-- [ ] CLOB order signing (HMAC + EIP-712)
-- [ ] WebSocket implementation (Binance + Polymarket)
+- [x] Official Polymarket SDK integration (rs-clob-client-v2)
+- [ ] Wire SDK into clob.rs (replace manual HTTP with SDK calls)
+- [ ] WebSocket via SDK (orderbook + user channel)
 - [ ] Remaining 12 strategies
 - [ ] Telegram integration
 - [ ] Auto-redeem
