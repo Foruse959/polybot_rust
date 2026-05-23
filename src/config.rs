@@ -52,7 +52,7 @@ impl Config {
                 .parse()
                 .unwrap_or(5.0),
             min_order_size: 1.0,
-            clob_url: "https://clob.polymarket.com".into(),
+            clob_url: "https://clob-v2.polymarket.com".into(),
             gamma_url: "https://gamma-api.polymarket.com".into(),
             chain_id: 137, // Polygon
         })

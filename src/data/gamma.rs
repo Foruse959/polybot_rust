@@ -10,6 +10,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use chrono::{Utc, Timelike};
+use tracing::{info, debug, warn};
 use crate::config::Config;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,6 +63,7 @@ impl GammaClient {
             for coin in &config.enabled_coins {
                 for &tf in &config.enabled_timeframes {
                     let slug = format!("{}-updown-{}m-{}", coin.to_lowercase(), tf, ts);
+                    debug!("Checking slug: {}", slug);
 
                     if let Some(market) = self.fetch_by_slug(&slug, coin, tf, now).await {
                         // Only include markets with time remaining
@@ -81,6 +83,7 @@ impl GammaClient {
     /// Fetch a single market by slug from Gamma events API
     async fn fetch_by_slug(&self, slug: &str, coin: &str, timeframe: u32, now_ts: i64) -> Option<Market> {
         let url = format!("{}/events?slug={}", self.base_url, slug);
+        debug!("Fetching: {}", url);
 
         let resp = self.client.get(&url).send().await.ok()?;
         if !resp.status().is_success() {

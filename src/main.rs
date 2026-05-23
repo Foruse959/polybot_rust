@@ -38,7 +38,10 @@ use crate::trading::guards::{DePegGuard, VolatilityDesertGuard, DriftReconciler}
 async fn main() -> anyhow::Result<()> {
     // Initialize logging (minimal overhead)
     tracing_subscriber::fmt()
-        .with_env_filter("polybot_rust=info")
+        .with_env_filter(
+            std::env::var("RUST_LOG")
+                .unwrap_or_else(|_| "polybot_rust=info".into())
+        )
         .with_target(false)
         .compact()
         .init();
@@ -69,12 +72,16 @@ async fn main() -> anyhow::Result<()> {
         depeg_guard.max_divergence_pct);
 
     // Start WebSocket in background (Binance + Polymarket CLOB)
-    let ws_prices = ws.prices.clone();
+    let _ws_prices = ws.prices.clone();
     tokio::spawn(async move {
         if let Err(e) = ws.start().await {
             error!("WS fatal: {}", e);
         }
     });
+
+    // Give WS a moment to connect, then proceed to scan loop
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    info!("Scan loop starting (WS connecting in background)...");
 
     // ═══════════════════════════════════════════════════════════════
     // MAIN SCAN LOOP — Target: <100ms per iteration
@@ -117,7 +124,10 @@ async fn main() -> anyhow::Result<()> {
         }
 
         if cached_markets.is_empty() {
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            if scan_round % 50 == 1 {
+                warn!("No markets found. Retrying in 2s...");
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
             continue;
         }
 
